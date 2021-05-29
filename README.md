@@ -1,89 +1,62 @@
 # UOCIS322 - Project 6 #
-Brevet time calculator with AJAX, MongoDB, and a RESTful API!
 
-## What is in this repository
+Author: Henry Craddock
 
-You have a minimal example of `docker-compose` in `DockerRestAPI`, using which you can create RESTful API-based services (as demonstrated in class). 
+Contact: henrycraddock@gmail.com, hcraddoc@uoregon.edu
 
-## IMPORTANT NOTES
+Forked from: https://github.com/alihassanijr/UOCIS322-P6.git
 
-**MAKE SURE TO USE THE SOLUTION `acp_times.py` from Canvas for this project!**
+## Brief description
 
-**MAKE SURE TO KEEP YOUR FILES in `brevets`! REMOVE `DockerRestAPI` after you're done!**
+Reimplementation of the RUSA ACP controle time calculator with Flask, AJAX, and MongoDB. Now with an additional
+RESTful API and a generic consumer website to access the data.
 
-## Getting started 
+The algorithm for calculating controle times is described here [https://rusa.org/pages/acp-brevet-control-times-calculator](https://rusa.org/pages/acp-brevet-control-times-calculator).
 
-You will reuse *your* code from Project 5.
+We are essentially replacing the calculator here [https://rusa.org/octime_acp.html](https://rusa.org/octime_acp.html).
 
-Recall that you created the following functionalities:
+## ACP controle times
 
-1. Add two buttons `Submit` and `Display` in the ACP calculator page.
+That's *"controle"* with an *e*, because it's French, although "control" is also accepted. 
+Controls are points where a rider must obtain proof of passage, and control[e] times are 
+the minimum and maximum times by which the rider must arrive at the location.
 
-2. Upon clicking the `Submit` button, the control times should be inserted into a MongoDB database.
+The RUSA algorithm has been implemented in the file `acp_times.py`. The algorithm is broken into two
+functions, `time_open()` and `time_close()`, both of which read information passed from the Flask app
+`flask_brevets.py`. Although appearing simple, the algorithm has a few complexities that make it 
+worth explaining. Firstly, the algorithm is based around set minimum and maximum speeds for different
+control distances, a table of which can be found on the RUSA website. Essentially, a control distance
+that falls in some range of the table will adhere to the minimum and maximum speeds in different chunks.
 
-3. Upon clicking the `Display` button, the entries from the database should be displayed in a new page.
+For example: A control point of 550 km will have its first 200 km calculated in the 0-200 km range,
+its second 200 km calculated in the 200-400 km range, and its final 150 km calculated in the 
+400-600 km range. It builds up opening and closing times sequentially. This is implemented through 
+various distance checks and subtractions in `acp_times.py`.
 
-4. Handle error cases appropriately. For example, `Submit` should return an error if no control times are input. One can imagine many such cases: you'll come up with as many cases as possible.
+Additionally, the accepted brevet distances of 200, 300, 400, 600, and 1000 km all have assigned 
+closing times for the entire brevet, even if those times do not correspond exactly to what would 
+be calculated using the algorithm.
 
-### Functionality you will add
+Control times within the first 60 km are subject to different calculations. The closing times are 
+determined by a speed of 20 km/hr plus an additional hour. The additional hour is due to the fact 
+that the 0 km control of the entire brevet closes an hour after it opens, regardless.
 
-This project has following four parts. Change the values for host and port according to your machine, and use the web browser to check the results.
+The `Submit` and `Display` buttons present on the webpage are integrated with a MongoDB database. 
+Each time the `Submit` button is pressed, the current entries in the calculator will replace any existing
+values in the database. Clicking the `Display` button loads the data in the database into a new HTML page.
 
-* You will design RESTful service to expose what is stored in MongoDB. Specifically, you'll use the boilerplate given in DockerRestAPI folder, and create the following three basic APIs:
-    * "http://<host:port>/listAll" should return all open and close times in the database
-    * "http://<host:port>/listOpenOnly" should return open times only
-    * "http://<host:port>/listCloseOnly" should return close times only
+## RESTful API
 
-* You will also design two different representations: one in csv and one in json. For the above, JSON should be your default representation for the above three basic APIs. 
-    * "http://<host:port>/listAll/csv" should return all open and close times in CSV format
-    * "http://<host:port>/listOpenOnly/csv" should return open times only in CSV format
-    * "http://<host:port>/listCloseOnly/csv" should return close times only in CSV format
+The control open and close time data values in the database can now be accessed through a RESTful API. This API has 
+resources `listAll`, `listOpenOnly`, and `listCloseOnly`. It also includes multiple representations of the data in 
+either CSV or JSON format, and a top "k" parameter can be passed to only return the first "k" control times in 
+the database. For example, a query to the API may look like:
 
-    * "http://<host:port>/listAll/json" should return all open and close times in JSON format
-    * "http://<host:port>/listOpenOnly/json" should return open times only in JSON format
-    * "http://<host:port>/listCloseOnly/json" should return close times only in JSON format
+* `http://<host:port>/listCloseOnly/csv?top=6`
 
-* You will also add a query parameter to get top "k" open and close times. For examples, see below.
+There is an additional basic consumer-side website that can be used to access the resources of this API. The website 
+includes options for selecting data output type, the top "k" parameter, and which resource to access.
 
-    * "http://<host:port>/listOpenOnly/csv?top=3" should return top 3 open times only (in ascending order) in CSV format 
-    * "http://<host:port>/listOpenOnly/json?top=5" should return top 5 open times only (in ascending order) in JSON format
-    * "http://<host:port>/listCloseOnly/csv?top=6" should return top 5 close times only (in ascending order) in CSV format
-    * "http://<host:port>/listCloseOnly/json?top=4" should return top 4 close times only (in ascending order) in JSON format
-
-* You'll also design consumer programs (e.g., in jQuery) to use the service that you expose. `website` inside `DockerRestAPI` is an example of that. It is uses PHP. You're welcome to use either PHP or jQuery to consume your services. NOTE: your consumer program should be in a different container like example in `DockerRestAPI`.
-
-
-## Tasks
-
-As always you'll turn in your `credentials.ini` using Canvas, which will point to your repository on GitHub, which should contain:
-
-* The working application with all 4 parts.
-
-* `docker-compose.yml`.
-
-* An updated `README`.
-
-## Grading Rubric
-
-* If your code works as expected: 100 points. This includes:
-    * Basic APIs work as expected.
-    * Representations work as expected.
-    * Query parameter-based APIs work as expected.
-    * Consumer program works as expected. 
-
-* For each non-working API, 5 points will be docked off. If none of them work,
-  you'll get 35 points assuming
-    * `README` is updated with your name, email, and details.
-    * `docker-compose.yml` works/builds without any errors.
-    * `Dockerfile` is present. 
-    * `credentials.ini` is submitted with the correct URL of your repo.
-
-* If the `README` is not clear or missing, 5 points will be docked off. 
-
-* If `Dockerfile` or `docker-compose` is missing, doesn't build or doesn't run, **15** points will be docked off.
-	
-* If `credentials.ini` is not submitted or the repo is not found, 0 will be assigned.
-
-## Credits
+### Credits
 
 Michal Young, Ram Durairajan, Steven Walton, Joe Istas.
