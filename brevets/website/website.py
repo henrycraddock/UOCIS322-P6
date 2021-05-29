@@ -12,7 +12,7 @@ def home():
 
 
 @app.route('/listdata', methods=["POST"])
-def listeverything():
+def listdata():
     app.logger.debug("Got a form submission")
     if flask.request.form.get('dtype') is '':
         dtype = 'json'
@@ -27,7 +27,6 @@ def listeverything():
     app.logger.debug(f"topk: {topk}")
     app.logger.debug(f"which: {which}")
     r = requests.get('http://restapi:5000/' + which + '/' + dtype + '?top=' + topk)
-    # return r.text
     return render_template('listdata.html', data=r.text)
 
 
